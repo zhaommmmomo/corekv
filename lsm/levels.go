@@ -6,16 +6,15 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hardcore-os/corekv/file"
 	"github.com/hardcore-os/corekv/utils"
 )
 
 type levelManager struct {
-	maxFid       uint64
-	opt          *Options
-	cache        *cache
-	manifestFile *file.ManifestFile
-	levels       []*levelHandler
+	maxFid uint64
+	opt    *Options
+	cache  *cache
+	// LAB Manifest .... Write your code  定义manifest文件句柄
+	levels []*levelHandler
 }
 
 type levelHandler struct {
@@ -34,11 +33,9 @@ func (lh *levelHandler) add(t *table) {
 func (lh *levelHandler) Get(key []byte) (*utils.Entry, error) {
 	// 如果是第0层文件则进行特殊处理
 	if lh.levelNum == 0 {
-		// TODO：logic...
 		// 获取可能存在key的sst
 		return lh.searchL0SST(key)
 	} else {
-		// TODO：logic...
 		return lh.searchLNSST(key)
 	}
 }
@@ -93,9 +90,7 @@ func (lm *levelManager) close() error {
 	if err := lm.cache.close(); err != nil {
 		return err
 	}
-	if err := lm.manifestFile.Close(); err != nil {
-		return err
-	}
+	// LAB Manifest .... Write your code  这里需要释放manifest文件的资源句柄
 	for i := range lm.levels {
 		if err := lm.levels[i].close(); err != nil {
 			return err
@@ -142,10 +137,11 @@ func (lm *levelManager) loadCache() {
 	}
 }
 func (lm *levelManager) loadManifest() (err error) {
-	lm.manifestFile, err = file.OpenManifestFile(&file.Options{Dir: lm.opt.WorkDir})
+	// LAB Manifest .... Write your code
 	return err
 }
 func (lm *levelManager) build() error {
+	// 创建一个 levels 的二维数组 用于管理每一层的sst文件
 	lm.levels = make([]*levelHandler, 0, utils.MaxLevelNum)
 	for i := 0; i < utils.MaxLevelNum; i++ {
 		lm.levels = append(lm.levels, &levelHandler{
@@ -153,29 +149,7 @@ func (lm *levelManager) build() error {
 			tables:   make([]*table, 0),
 		})
 	}
-
-	manifest := lm.manifestFile.GetManifest()
-	// 对比manifest 文件的正确性
-	if err := lm.manifestFile.RevertToManifest(utils.LoadIDMap(lm.opt.WorkDir)); err != nil {
-		return err
-	}
-	var maxFid uint64
-	for fID, tableInfo := range manifest.Tables {
-		fileName := utils.FileNameSSTable(lm.opt.WorkDir, fID)
-		if fID > maxFid {
-			maxFid = fID
-		}
-		t := openTable(lm, fileName, nil)
-		lm.levels[tableInfo.Level].tables = append(lm.levels[tableInfo.Level].tables, t)
-	}
-	// 对每一层进行排序
-	for i := 0; i < utils.MaxLevelNum; i++ {
-		lm.levels[i].Sort()
-	}
-	// 得到最大的fid值
-	lm.maxFid = maxFid
-	// 逐一加载sstable 的index block 构建cache
-	lm.loadCache()
+	// LAB Manifest .... Write your code
 	return nil
 }
 
@@ -196,10 +170,7 @@ func (lm *levelManager) flush(immutable *memTable) (err error) {
 	table := openTable(lm, sstName, builder)
 	// 更新manifest文件
 	lm.levels[0].add(table)
-	err = lm.manifestFile.AddTableMeta(0, &file.TableMeta{
-		ID:       nextID,
-		Checksum: []byte{'m', 'o', 'c', 'k'},
-	})
+	// LAB Manifest .... Write your code 添加变更到manifest状态机中
 	// manifest写入失败直接panic
 	utils.CondPanic(err != nil, err)
 	// 只有完全正确的flush了文件，才能关闭immutable，保证wal文件的存在，才能恢复数据

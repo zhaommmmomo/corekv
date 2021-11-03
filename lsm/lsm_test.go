@@ -59,25 +59,9 @@ func TestLSM(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, []byte("world7"), v.Value)
 		t.Logf("levels.Get key=%s, value=%s, expiresAt=%d", v.Key, v.Value, v.ExpiresAt)
-
-		// 测试Recovery
-		// 再写一次
-		lsm.memTable = lsm.NewMemtable()
-		for _, entry := range entrys {
-			lsm.Set(entry)
-		}
-		// 强制recovery 相当于数据库重启，工作目录中wal文件不会清空
-
-		imm, imms := lsm.recovery()
-		assert.NotEmpty(t, imm)
-		assert.Equal(t, len(imms) != 0, true)
-		for _, mem := range imms {
-			e, _ := mem.Get([]byte("hello7_12345678"))
-			assert.Equal(t, []byte("world7"), e.Value)
-		}
 	}
 	// 运行N次测试多个sst的影响
 	for i := 0; i < 2; i++ {
-		levelLive()
+		levelLive() // 执行两次可以覆盖manifest的全部状态机
 	}
 }
