@@ -29,20 +29,8 @@ type (
 )
 
 func Open(options *Options) *DB {
-	db := &DB{opt: options}
-	// 初始化LSM结构
-	db.lsm = lsm.NewLSM(&lsm.Options{})
-	// 初始化vlog结构
-	db.vlog = vlog.NewVLog(&vlog.Options{})
-	// 初始化统计信息
-	db.stats = newStats(options)
-	// 启动 sstable 的合并压缩过程
-	go db.lsm.StartMerge()
-	// 启动 vlog gc 过程
-	go db.vlog.StartGC()
-	// 启动 info 统计过程
-	go db.stats.StartStats()
-	return db
+	
+	return nil
 }
 
 func (db *DB) Close() error {
