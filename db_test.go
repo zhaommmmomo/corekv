@@ -9,6 +9,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	opt := NewDefaultOptions()
+	// 打开
 	db := Open(opt)
 	defer func() { _ = db.Close() }()
 	// 写入
